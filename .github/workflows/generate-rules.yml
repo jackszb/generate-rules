@@ -1,0 +1,141 @@
+name: Generate rule set files
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y make curl
+
+      - name: Create working directory
+        run: |
+          rm -rf configs
+          mkdir -p configs
+
+      - name: Download SRS files
+        working-directory: ./configs
+        run: |
+          set -e
+          urls=(
+            "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-private.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cctv.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-bilibili.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-douyin.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-alibaba.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-tencent.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-ads-all.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-httpdns-cn.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-cryptocurrency.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-geolocation-!cn.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-youtube.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-github.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-openai.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-netflix.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-twitter.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-discord.srs"
+          )
+
+          for url in "${urls[@]}"; do
+            echo "Downloading $url ..."
+            curl -L -O "$url"
+          done
+
+          echo "Downloaded SRS files:"
+          ls -al
+
+      - name: Clone sing-box
+        run: git clone --depth 1 https://github.com/SagerNet/sing-box.git
+
+      - name: Build sing-box
+        working-directory: ./sing-box
+        run: make install
+
+      - name: Decompile SRS files to JSON
+        working-directory: ./configs
+        run: |
+          set -e
+          for f in *.srs; do
+            echo "Decompiling $f ..."
+            sing-box rule-set decompile "$f" -o "${f%.srs}.json"
+          done
+
+      - name: Merge JSON rule sets
+        working-directory: ./configs
+        run: |
+          set -e
+          sing-box rule-set merge \
+            -c geosite-cn.json \
+            -c geosite-private.json \
+            -c geosite-cctv.json \
+            -c geosite-bilibili.json \
+            -c geosite-douyin.json \
+            -c geosite-alibaba.json \
+            -c geosite-tencent.json \
+            geosite-direct.json
+
+          sing-box rule-set merge \
+            -c geosite-category-ads-all.json \
+            -c geosite-category-httpdns-cn.json \
+            -c geosite-category-cryptocurrency.json \
+            geosite-reject.json
+
+          sing-box rule-set merge \
+            -c geosite-geolocation-!cn.json \
+            -c geosite-youtube.json \
+            -c geosite-google.json \
+            -c geosite-github.json \
+            -c geosite-openai.json \
+            -c geosite-netflix.json \
+            -c geosite-twitter.json \
+            -c geosite-discord.json \
+            geosite-proxy.json
+
+      - name: Compile SRS files
+        working-directory: ./configs
+        run: |
+          set -e
+          sing-box rule-set compile geosite-direct.json -o ../geosite-direct.srs
+          sing-box rule-set compile geosite-reject.json -o ../geosite-reject.srs
+          sing-box rule-set compile geosite-proxy.json -o ../geosite-proxy.srs
+          mv geoip-cn.srs ../geoip-direct.srs
+
+      - name: Clean working directory
+        run: rm -rf configs
+
+      - name: List final output files
+        run: ls -al geosite-direct.srs geosite-reject.srs geosite-proxy.srs geoip-direct.srs
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions@github.com"
+
+          git add geosite-direct.srs geosite-reject.srs geosite-proxy.srs geoip-direct.srs
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "[CI] Update rule set files automatically"
+            git push
+          fi
