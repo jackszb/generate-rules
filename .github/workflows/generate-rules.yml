@@ -35,10 +35,7 @@ jobs:
         run: |
           set -e
           urls=(
-            # geoip
             "https://raw.githubusercontent.com/SagerNet/sing-geoip/rule-set/geoip-cn.srs"
-
-            # base geosite
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cn.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-private.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-cctv.srs"
@@ -57,21 +54,16 @@ jobs:
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-netflix.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-twitter.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-discord.srs"
-
-            # ---------- 新增 geosite-direct ----------
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-jd.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-apple.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-icloud.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-bilibili-cdn.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-didi.srs"
-
-            # ---------- 新增 geosite-proxy ----------
+            "https://raw.githubusercontent.com/jackszb/selfuse-rules/main/wechat.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-tiktok.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-instagram.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google-gemini.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-facebook.srs"
-
-            # ---------- 新增 geosite-reject ----------
             "https://raw.githubusercontent.com/jackszb/AdGuardDNSfilter/rule-set/AdGuardSDNSFilter-NoRegex.srs"
           )
 
@@ -103,8 +95,6 @@ jobs:
         working-directory: ./configs
         run: |
           set -e
-
-          # ---------------- geosite-direct ----------------
           sing-box rule-set merge \
             -c geosite-cn.json \
             -c geosite-private.json \
@@ -118,9 +108,9 @@ jobs:
             -c geosite-icloud.json \
             -c geosite-bilibili-cdn.json \
             -c geosite-didi.json \
+            -c wechat.json \
             geosite-direct.json
 
-          # ---------------- geosite-reject ----------------
           sing-box rule-set merge \
             -c geosite-category-ads-all.json \
             -c geosite-category-httpdns-cn.json \
@@ -128,7 +118,6 @@ jobs:
             -c AdGuardSDNSFilter-NoRegex.json \
             geosite-reject.json
 
-          # ---------------- geosite-proxy ----------------
           sing-box rule-set merge \
             -c geosite-geolocation-!cn.json \
             -c geosite-youtube.json \
