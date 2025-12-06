@@ -65,6 +65,11 @@ jobs:
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-google-gemini.srs"
             "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-facebook.srs"
             "https://raw.githubusercontent.com/jackszb/AdGuardDNSfilter/rule-set/AdGuardSDNSFilter-NoRegex.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-microsoft.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-chinanews.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-category-hospital-cn.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-reddit.srs"
+            "https://raw.githubusercontent.com/SagerNet/sing-geosite/rule-set/geosite-onedrive.srs"
           )
 
           for url in "${urls[@]}"; do
@@ -72,7 +77,6 @@ jobs:
             curl -L -O "$url"
           done
 
-          echo "Downloaded SRS files:"
           ls -al
 
       - name: Clone sing-box
@@ -87,7 +91,6 @@ jobs:
         run: |
           set -e
           for f in *.srs; do
-            echo "Decompiling $f ..."
             sing-box rule-set decompile "$f" -o "${f%.srs}.json"
           done
 
@@ -95,6 +98,7 @@ jobs:
         working-directory: ./configs
         run: |
           set -e
+
           sing-box rule-set merge \
             -c geosite-cn.json \
             -c geosite-private.json \
@@ -109,51 +113,56 @@ jobs:
             -c geosite-bilibili-cdn.json \
             -c geosite-didi.json \
             -c wechat.json \
+            -c geosite-microsoft.json \
+            -c geosite-chinanews.json \
+            -c geosite-category-hospital-cn.json \
             geosite-direct.json
 
           sing-box rule-set merge \
             -c geosite-category-ads-all.json \
             -c geosite-category-httpdns-cn.json \
-            -c geosite-category-cryptocurrency.json \
+            -c geisite-category-cryptocurrency.json \
             -c AdGuardSDNSFilter-NoRegex.json \
             geosite-reject.json
 
           sing-box rule-set merge \
             -c geosite-geolocation-!cn.json \
-            -c geosite-youtube.json \
-            -c geosite-google.json \
-            -c geosite-github.json \
-            -c geosite-openai.json \
-            -c geosite-netflix.json \
-            -c geosite-twitter.json \
-            -c geosite-discord.json \
-            -c geosite-tiktok.json \
-            -c geosite-instagram.json \
-            -c geosite-google-gemini.json \
-            -c geosite-facebook.json \
-            geosite-proxy.json
+            -c geisite-youtube.json \
+            -c geisite-google.json \
+            -c geisite-github.json \
+            -c geisite-openai.json \
+            -c geisite-netflix.json \
+            -c geisite-twitter.json \
+            -c geisite-discord.json \
+            -c geisite-tiktok.json \
+            -c geisite-instagram.json \
+            -c geisite-google-gemini.json \
+            -c geisite-facebook.json \
+            -c geisite-reddit.json \
+            -c geisite-onedrive.json \
+            geisite-proxy.json
 
       - name: Compile SRS files
         working-directory: ./configs
         run: |
           set -e
-          sing-box rule-set compile geosite-direct.json -o ../geosite-direct.srs
-          sing-box rule-set compile geosite-reject.json -o ../geosite-reject.srs
-          sing-box rule-set compile geosite-proxy.json -o ../geosite-proxy.srs
+          sing-box rule-set compile geisite-direct.json -o ../geisite-direct.srs
+          sing-box rule-set compile geisite-reject.json -o ../geisite-reject.srs
+          sing-box rule-set compile geisite-proxy.json -o ../geisite-proxy.srs
           mv geoip-cn.srs ../geoip-direct.srs
 
       - name: Clean working directory
         run: rm -rf configs
 
       - name: List final output files
-        run: ls -al geosite-direct.srs geosite-reject.srs geosite-proxy.srs geoip-direct.srs
+        run: ls -al geisite-direct.srs geisite-reject.srs geisite-proxy.srs geoip-direct.srs
 
       - name: Commit and push changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions@github.com"
 
-          git add geosite-direct.srs geosite-reject.srs geosite-proxy.srs geoip-direct.srs
+          git add geisite-direct.srs geisite-reject.srs geisite-proxy.srs geoip-direct.srs
 
           if git diff --cached --quiet; then
             echo "No changes to commit."
